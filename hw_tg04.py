@@ -44,6 +44,7 @@ async def dinamic(message: Message):
 @dp.callback_query(F.data == 'dinamic')
 async def new_buttons(callback: CallbackQuery):
    await callback.message.edit_text('Вот другие кнопки!', reply_markup=await kb.new_keyboard1())
+
 # Запуск бота
 async def main():
     await dp.start_polling(bot)
