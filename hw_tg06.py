@@ -1,12 +1,10 @@
 import asyncio
 from aiogram import Bot, Dispatcher, F
 
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.memory import MemoryStorage
-
 
 import keyb_tg06 as kb
 
@@ -46,6 +44,7 @@ cursor.execute(''' CREATE TABLE IF NOT EXISTS users (
 ''')
 conn.commit()
 
+
 # Класс состояния для каждой категории и каждого значения
 class FinancesForm(StatesGroup):
     category1 = State()
@@ -55,13 +54,15 @@ class FinancesForm(StatesGroup):
     category3 = State()
     expenses3 = State()
 
-# Задание 1: Создание простого меню с кнопками
+
+# Создание простого меню с кнопками
 @dp.message(CommandStart())
 async def send_welcome(message: Message):
     keyboards = kb.keyboards
     await message.answer("Привет! Я ваш личный финансовый помощник. Выберите опцию из меню:", reply_markup=keyboards)
 
 
+# Регистрация в ТГ боте
 @dp.message(F.text == "Регистрация в ТГ-боте")
 async def registration(message: Message):
     telegram_id = message.from_user.id
@@ -76,9 +77,10 @@ async def registration(message: Message):
         await message.answer("Вы успешно зарегистрированы!")
 
 
+# Получить курс валют, через API, через 2 недели сломается
 @dp.message(F.text == "Курс валют")
 async def exchange_rates(message: Message):
-    url ="https://v6.exchangerate-api.com/v6/09edf8b2bb246e1f801cbfba/latest/USD"
+    url = "https://v6.exchangerate-api.com/v6/09edf8b2bb246e1f801cbfba/latest/USD"
     try:
         response = requests.get(url)
         data = response.json()
@@ -97,6 +99,7 @@ async def exchange_rates(message: Message):
         await message.answer("Произошла ошибка!")
 
 
+# Советы по экономии :)
 @dp.message(F.text == "Советы по экономии")
 async def send_tips(message: Message):
     tips = [
@@ -108,6 +111,7 @@ async def send_tips(message: Message):
     await message.answer(tip)
 
 
+# Учет личных финансов - ерунда полная, а не учет
 @dp.message(F.text == "Личные финансы")
 async def finances(message: Message, state: FSMContext):
     await state.set_state(FinancesForm.category1)
@@ -116,33 +120,35 @@ async def finances(message: Message, state: FSMContext):
 
 @dp.message(FinancesForm.category1)
 async def finances(message: Message, state: FSMContext):
-    await state.update_data(category1 = message.text)
+    await state.update_data(category1=message.text)
     await state.set_state(FinancesForm.expenses1)
     await message.reply("Введите расходы для категории 1:")
 
 
 @dp.message(FinancesForm.expenses1)
 async def finances(message: Message, state: FSMContext):
-    await state.update_data(expenses1 = float(message.text))
+    await state.update_data(expenses1=float(message.text))
     await state.set_state(FinancesForm.category2)
     await message.reply("Введите вторую категорию расходов:")
 
+
 @dp.message(FinancesForm.category2)
 async def finances(message: Message, state: FSMContext):
-    await state.update_data(category2 = message.text)
+    await state.update_data(category2=message.text)
     await state.set_state(FinancesForm.expenses2)
     await message.reply("Введите расходы для категории 2:")
 
 
 @dp.message(FinancesForm.expenses2)
 async def finances(message: Message, state: FSMContext):
-    await state.update_data(expenses2 = float(message.text))
+    await state.update_data(expenses2=float(message.text))
     await state.set_state(FinancesForm.category3)
     await message.reply("Введите третью категорию расходов:")
 
+
 @dp.message(FinancesForm.category3)
 async def finances(message: Message, state: FSMContext):
-    await state.update_data(category3 = message.text)
+    await state.update_data(category3=message.text)
     await state.set_state(FinancesForm.expenses3)
     await message.reply("Введите расходы для категории 3:")
 
@@ -151,11 +157,12 @@ async def finances(message: Message, state: FSMContext):
 async def finances(message: Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = message.from_user.id
+
     cursor.execute('''
     UPDATE users SET category1 = ?, expenses1 = ?, category2 = ?, expenses2 = ?, category3 = ?, expenses3 = ?
     WHERE telegram_id = ?''',
-                   (data['category1'], data['expenses1'],data['category2'], data['expenses2'],
-                    data['category3'], float(message.text),telegram_id)
+                   (data['category1'], data['expenses1'], data['category2'], data['expenses2'],
+                    data['category3'], float(message.text), telegram_id)
                    )
     conn.commit()
     await state.clear()
@@ -163,9 +170,10 @@ async def finances(message: Message, state: FSMContext):
     await message.answer("Категории и расходы сохранены!")
 
 
+# Для тестирования - заглянем в БД
 @dp.message(Command(commands=['base']))
 async def show_base(message: Message):
-    # Извлечение всех данных из базы данных
+    # Извлечение всех данных из БД - проверяем что сохранили
     conn = sqlite3.connect('users_tg06.db')
     cur = conn.cursor()
     cur.execute('''SELECT id, telegram_id, name,  
@@ -187,6 +195,8 @@ async def show_base(message: Message):
 
     # Отправка сообщения пользователю
     await message.answer(response)
+
+
 # Запуск бота
 async def main():
     await dp.start_polling(bot)
